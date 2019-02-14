@@ -20,7 +20,7 @@ module Text.Pretty
     , appendWithSpace, (<+>)
 
     -- General convenience
-    , enclose, punctuate
+    , enclose, punctuate, punctuate'
 
     -- Render
     , render
@@ -279,6 +279,14 @@ punctuate
     => Doc a -> f (Doc a)
     -> f (Doc a)
 punctuate p = Container.mapInit (_ <> p)
+
+
+-- | `punctuate' p xs` prepends `p` to all but the first document in `xs`.
+punctuate'
+    :: forall f a. Container f => Functor f => Renderable a
+    => Doc a -> f (Doc a)
+    -> f (Doc a)
+punctuate' p = Container.mapTail (p <> _)
 
 
 -- RENDERING

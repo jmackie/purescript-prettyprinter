@@ -6,6 +6,7 @@ import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Array.NonEmpty as NonEmptyArray
 import Data.Foldable (intercalate)
 import Data.NonEmpty ((:|))
+import Data.Renderable (class Renderable)
 import Data.String as String
 import Effect (Effect)
 import Test.Common (runTest, green)
@@ -45,7 +46,7 @@ instance monoidFancy :: Monoid Fancy where
     mempty = Plain ""
 
 
-instance renderableFancy :: Pretty.Renderable Fancy where
+instance renderableFancy :: Renderable Fancy where
     space   = Plain " "
     newline = Plain "\n"
     width   = unFancy >>> String.length

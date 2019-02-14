@@ -4,6 +4,7 @@ module Text.Pretty
     -- Basic functionality
     , text, nest, group, flatAlt, flatAltFn
     , line, line', softline, softline', hardline
+    , space
 
     -- Alignment
     , align, hang, indent
@@ -23,7 +24,6 @@ module Text.Pretty
 
     -- Render
     , render
-    , module Renderable
     )
 where
 
@@ -38,7 +38,7 @@ import Data.Foldable (class Foldable, fold, intercalate)
 import Data.List (List(Nil), (:))
 import Data.Maybe (Maybe(Just, Nothing))
 import Data.Renderable (class Renderable)
-import Data.Renderable (class Renderable, space, width, newline) as Renderable
+import Data.Renderable as Renderable
 import Data.Tuple (Tuple(Tuple))
 import Data.Unfoldable (replicate)
 import Partial (crashWith)
@@ -138,7 +138,7 @@ flatAltFn f g x = FlatAlt (f x) (g x)
 -- | The `line` document advances to the next line and indents to the current
 -- | nesting level.
 line :: forall a. Renderable a => Doc a
-line = FlatAlt Line (text Renderable.space)
+line = FlatAlt Line space
 
 
 -- | `line'` is like `line`, but behaves like `mempty` if the line break
@@ -163,6 +163,11 @@ softline' = group line'
 -- | when there is plenty of space.
 hardline :: forall a. Doc a
 hardline = Line
+
+
+-- | A single space document.
+space :: forall a. Renderable a => Doc a
+space = text Renderable.space
 
 
 -- ALIGNMENT
@@ -197,7 +202,7 @@ indent i x = hang i (text (spaces i) <> x)
 
 -- | Concatenate documents with a horizontal space between them.
 hsep :: forall f a. Foldable f => Renderable a => f (Doc a) -> Doc a
-hsep = intercalate (text Renderable.space)
+hsep = intercalate space
 
 
 -- | `vsep xs` concatenates all documents `xs` above each other. If a
@@ -253,7 +258,7 @@ nesting = Nesting
 
 -- | Append two documents with a space between them.
 appendWithSpace :: forall a. Renderable a => Doc a -> Doc a -> Doc a
-appendWithSpace = appendWith (text Renderable.space)
+appendWithSpace = appendWith space
 
 
 infixr 5 appendWithSpace as <+>

@@ -13,11 +13,11 @@ A port of the Haskell [`prettyprinter`][prettyprinter] library by Wadler and fri
 
 ## TODO
 
--   Port more functionality (if necessary)
--   Implement ribbon widths
--   More tests
--   Optimisations
--   Stack safety
+-   [ ] Port more functionality (if necessary)
+-   [ ] Implement ribbon widths
+-   [ ] More tests
+-   [ ] Optimisations
+-   [ ] Stack safety
 
 [prettyprinter]: http://hackage.haskell.org/package/prettyprinter
 [prettier-printer]: https://homepages.inf.ed.ac.uk/wadler/papers/prettier/prettier.pdf

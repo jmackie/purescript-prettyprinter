@@ -5,3 +5,4 @@ node_modules
 .psci
 output
 tags*
+.psc-ide-port

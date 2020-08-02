@@ -4,7 +4,7 @@ module Text.Pretty
     -- Basic functionality
     , text, nest, group, flatAlt, flatAltFn
     , line, line', softline, softline', hardline
-    , space
+    , space, emptyDoc
 
     -- Alignment
     , align, hang, indent
@@ -85,6 +85,9 @@ instance semigroupDoc :: Semigroup (Doc a) where
 
 instance monoidDoc :: Monoid (Doc a) where
   mempty = Empty
+
+emptyDoc :: forall a . Doc a
+emptyDoc = Empty
 
 -- | BASICS
 

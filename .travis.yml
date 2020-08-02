@@ -1,0 +1,9 @@
+language: node_js
+dist: trusty
+sudo: required
+node_js: stable
+install:
+  - npm install -g spago purescript
+  - spago install
+script:
+  - spago test

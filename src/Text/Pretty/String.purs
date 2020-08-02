@@ -1,13 +1,4 @@
-module Text.Pretty.String
-    (
-    -- Bracketing combinators
-      squotes, dquotes, parens, angles, brackets, braces
-
-    -- Character documents
-    , lparen, rparen, langle, rangle, lbrace, rbrace, lbracket, rbracket
-    , squote, dquote, semi, colon, comma
-    )
-where
+module Text.Pretty.String where
 
 import Text.Pretty (Doc, enclose, text)
 

@@ -16,3 +16,17 @@ test = do
         ]
   runTest 10 docList
   runTest 5 docList
+
+  let docListNested =
+        Pretty.list
+        [ Pretty.text "1"
+        , Pretty.text "2"
+        , Pretty.text "3"
+        , Pretty.list
+          [ Pretty.text "1"
+          , Pretty.text "2"
+          , Pretty.text "3"
+          ]
+        ]
+  runTest 30 docListNested
+  runTest 5 docListNested

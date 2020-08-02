@@ -1,7 +1,7 @@
 module Text.Pretty.Code.Purescript where
 
-import Prelude (($), (<<<), (<>), (==))
-import Text.Pretty (Doc, align, cat, flatAlt, group, hcat, punctuate, space, text)
+import Prelude
+import Text.Pretty
 import Data.Renderable (class Renderable)
 import Data.Array as Array
 
@@ -16,18 +16,9 @@ encloseSep
 encloseSep leftDelimiter rightDelimiter separator = case _ of
     []   -> leftDelimiter <> rightDelimiter
     docs ->
-      flatAlt
-      (cat $ Array.mapWithIndex
-        (\i doc ->
-          if i == 0
-            then leftDelimiter <> space <> align doc
-            else separator <> align doc
-        )
-        docs
-        <>
-        [rightDelimiter]
-      )
-      (leftDelimiter <> hcat (punctuate separator docs) <> rightDelimiter)
+      let
+        leftDelimiter' = flatAlt (leftDelimiter <> space) leftDelimiter
+      in cat $ (Array.zipWith (<>) ([leftDelimiter'] <> Array.replicate (Array.length docs - 1) separator) (map align docs)) <> [rightDelimiter]
 
 -- | Purescript-inspired variant of 'encloseSep' with braces and comma as
 -- separator.

@@ -1,7 +1,7 @@
 module Text.Pretty.Code.Haskell where
 
-import Prelude ((-), (<<<), (<>))
-import Text.Pretty (Doc, cat, flatAlt, group, text)
+import Prelude
+import Text.Pretty
 import Data.Renderable (class Renderable)
 import Data.Array as Array
 
@@ -39,7 +39,7 @@ encloseSep
 encloseSep l r s ds = case ds of
     []  -> l <> r
     [d] -> l <> d <> r
-    _   -> cat (Array.zipWith (<>) ([l] <> Array.replicate (Array.length ds - 1) s) ds) <> r
+    _   -> cat (Array.zipWith (<>) ([l] <> Array.replicate (Array.length ds - 1) s) (map align ds)) <> r
 
 -- | Haskell-inspired variant of 'encloseSep' with braces and comma as
 -- separator.

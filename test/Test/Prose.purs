@@ -7,7 +7,6 @@ import Data.Foldable (foldl, length)
 import Data.Maybe (Maybe(Just, Nothing))
 import Data.Traversable (sequence)
 import Data.Unfoldable (replicate)
-import Debug.Trace (spy, trace)
 import Effect (Effect)
 import Effect.Random as Random
 import Test.Common (runTest)

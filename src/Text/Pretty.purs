@@ -64,7 +64,7 @@ module Text.Pretty (
   spaces,
 
   -- | Functions from this library, that are not present in haskell library
-  text, flatAltFn, space
+  text, flatAltFn, space, concatWithNonEmpty
 ) where
 
 -- NOTE: Think of and build your layout in its narrowest form, then `group` the
@@ -73,7 +73,8 @@ module Text.Pretty (
 import Prelude
 
 import Control.Alt ((<|>))
-import Data.Array as Array
+import Data.Array.NonEmpty as NonEmptyArray
+import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Container.Class (class Container)
 import Data.Container.Class as Container
 import Data.Foldable (class Foldable, fold, foldl, intercalate)
@@ -257,7 +258,7 @@ vsep = intercalate line
 -- Docs: lorem ipsum dolor sit amet lorem
 -- ipsum dolor sit amet lorem ipsum dolor
 -- sit amet lorem ipsum dolor sit amet
-fillSep :: forall a . Renderable a => Array (Doc a) -> Doc a
+fillSep :: forall a f . Container f => Foldable f => Renderable a => f (Doc a) -> Doc a
 fillSep = concatWith (\x y -> x <> softline <> y)
 
 -- | Concatenate all documents element-wise with a binary function.
@@ -279,12 +280,15 @@ fillSep = concatWith (\x y -> x <> softline <> y)
 --
 -- >>> concatWith (surround dot) ["Prettyprinter", "Render", "Text"]
 -- Prettyprinter.Render.Text
-concatWith :: forall a . (Doc a -> Doc a -> Doc a) -> Array (Doc a) -> Doc a
+concatWith :: forall a f . Container f => Foldable f => (Doc a -> Doc a -> Doc a) -> f (Doc a) -> Doc a
 concatWith f =
-  Array.uncons
+  Container.uncons
     >>> case _ of
         Nothing -> Empty
         Just { head, tail } -> foldl f head tail
+
+concatWithNonEmpty :: forall a . (Doc a -> Doc a -> Doc a) -> NonEmptyArray (Doc a) -> Doc a
+concatWithNonEmpty f = NonEmptyArray.uncons >>> \{ head, tail } -> foldl f head tail
 
 -- | `sep xs` tries laying out the documents `xs` separated with spaces,
 -- | and if this does not fit the page, separates them with newlines. This is what

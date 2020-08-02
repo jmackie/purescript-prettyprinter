@@ -58,9 +58,7 @@ list = group <<< encloseSep (text "[") (text "]") (text ", ")
 -- ( 1
 -- , 20
 -- , 300
--- , 4000 )
--- | tupled :: Array (Doc String) -> Doc String
--- | tupled = group <<< encloseSepDangling (flatAlt (text "( ") (text "("))
--- |                                       (flatAlt (text " )") (text ")"))
--- |                                       (text ", ")
--- |                                       (text ")")
+-- , 4000
+-- )
+tupled :: Array (Doc String) -> Doc String
+tupled = group <<< encloseSep (text "(") (text ")") (text ", ")

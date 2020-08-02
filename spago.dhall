@@ -10,6 +10,7 @@
     , "random"
     , "ansi"
     , "console"
+    , "debug"
     ]
 , packages =
     ./packages.dhall

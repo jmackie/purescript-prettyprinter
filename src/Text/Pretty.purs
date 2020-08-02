@@ -31,11 +31,14 @@ where
 -- parts that _could_ be flattened if there's space available.
 
 import Prelude
+
 import Control.Alt ((<|>))
 import Data.Container.Class (class Container)
 import Data.Container.Class as Container
 import Data.Foldable (class Foldable, fold, intercalate)
-import Data.List (List(Nil), (:))
+import Data.Lazy (Lazy)
+import Data.Lazy as Lazy
+import Data.List (List(..), (:))
 import Data.Maybe (Maybe(Just, Nothing))
 import Data.Renderable (class Renderable)
 import Data.Renderable as Renderable
@@ -150,13 +153,13 @@ line' = FlatAlt Line mempty
 -- | `softline` behaves like `space` if the resulting output fits the page,
 -- otherwise like `line`.
 softline :: forall a. Renderable a => Doc a
-softline = group line
+softline = Union space Line
 
 
 -- | `softline'` is like `softline`, but behaves like `mempty` if the
 -- | resulting output does not fit on the page (instead of `space`).
 softline' :: forall a. Renderable a => Doc a
-softline' = group line'
+softline' = Union mempty Line
 
 
 -- | A `hardline` is _always_ laid out as a line break, even when `group`ed or
@@ -294,7 +297,7 @@ punctuate' p = Container.mapTail (p <> _)
 
 -- | Render a document, trying not to exceed a maximum line width.
 render :: forall a. Renderable a => Int -> Doc a -> a
-render w x = layout (best w 0 (Tuple 0 x : Nil))
+render width doc = layout $ forceSimpleDocStream $ best width 0 $ (Tuple 0 doc) : Nil
 
 
 -- INTERNALS
@@ -345,6 +348,18 @@ data SimpleDocStream a
     | SText Int a (SimpleDocStream a)
     | SLine Int (SimpleDocStream a)
 
+data LazySimpleDocStream a
+    = LSFail -- a stream ending in `LSFail` doesn't _fit_
+    | LSEmpty
+    | LSText Int a (Lazy (LazySimpleDocStream a))
+    | LSLine Int (Lazy (LazySimpleDocStream a))
+
+forceSimpleDocStream :: forall a . LazySimpleDocStream a -> SimpleDocStream a
+forceSimpleDocStream = case _ of
+  LSFail -> SFail
+  LSEmpty -> SEmpty
+  LSText i s x -> SText i s (forceSimpleDocStream $ Lazy.force x)
+  LSLine i x -> SLine i (forceSimpleDocStream $ Lazy.force x)
 
 -- | Actual render a chosen document stream.
 layout :: forall a. Renderable a => SimpleDocStream a -> a
@@ -361,37 +376,41 @@ best
     => Int -- available width
     -> Int -- column number (i.e. chars on this line, including indentation)
     -> Docs a
-    -> SimpleDocStream a
-best _ _ Nil = SEmpty
-best w k (Tuple i d : rest) = case d of
-    -- TODO: Would this benefit from some laziness?
-    Empty       -> best w k rest
-    Fail        -> SFail
-    Text l a    -> SText l a (best w (k + l) rest)
-    Line        -> SLine i   (best w i rest)
-    Cat x y     -> best w k (Tuple i x : Tuple i y : rest)
-    Nest j x    -> best w k (Tuple (i + j) x : rest)
-    Column f    -> best w k (Tuple i (f k) : rest)
-    Nesting f   -> best w k (Tuple i (f i) : rest)
-    FlatAlt x y -> best w k (Tuple i x : rest)
-    Union x y   ->
-        better w k
-            (best w k (Tuple i x : rest))
-            (best w k (Tuple i y : rest))
+    -> LazySimpleDocStream a
+best w k = case _ of
+  Nil -> LSEmpty
+  ((Tuple identation doc) : rest) ->
+    case doc of
+      Empty       -> best w k rest
+      Fail        -> LSFail
+      Text l a    -> LSText l a (Lazy.defer \_ -> best w (k + l) rest)
+      Line        -> LSLine identation (Lazy.defer \_ ->  best w identation rest)
+      Cat x y     -> best w k (Tuple identation x : Tuple identation y : rest)
+      Nest j x    -> best w k (Tuple (identation + j) x : rest)
+      Column f    -> best w k (Tuple identation (f k) : rest)
+      Nesting f   -> best w k (Tuple identation (f identation) : rest)
+      FlatAlt x y -> best w k (Tuple identation x : rest)
+      Union x y   ->
+          better w k
+              (best w k (Tuple identation x : rest))
+              (best w k (Tuple identation y : rest))
 
 better
-    :: forall a. Renderable a
-    => Int -> Int -> SimpleDocStream a -> SimpleDocStream a
-    -> SimpleDocStream a
+    :: forall a
+     . Int
+    -> Int
+    -> LazySimpleDocStream a
+    -> LazySimpleDocStream a
+    -> LazySimpleDocStream a
 better w k x y = if fits (w - k) x then x else y
 
 
-fits :: forall a. Renderable a => Int -> SimpleDocStream a -> Boolean
+fits :: forall a. Int -> LazySimpleDocStream a -> Boolean
 fits w _ | w < 0     = false
-fits _ SFail         = false  -- NOTE: This is what Fail constructors are for!
-fits _ SEmpty        = true
-fits w (SText l _ x) = fits (w - l) x
-fits _ (SLine _ _)   = true
+fits _ LSFail         = false  -- NOTE: This is what Fail constructors are for!
+fits _ LSEmpty        = true
+fits w (LSText l _ x) = fits (w - l) (Lazy.force x)
+fits _ (LSLine _ _)   = true
 
 
 -- | Append documents with some other document between them.

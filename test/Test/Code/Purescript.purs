@@ -1,4 +1,4 @@
-module Test.Code.Haskell (test) where
+module Test.Code.Purescript (test) where
 
 import Prelude
 import Data.Array as Array
@@ -12,7 +12,7 @@ import Effect (Effect)
 import Test.Common (runTest, green)
 import Text.Pretty ((<+>))
 import Text.Pretty as Pretty
-import Text.Pretty.Code.Haskell as Pretty
+import Text.Pretty.Code.Purescript as Pretty
 
 test :: Effect Unit
 test = do

@@ -10,6 +10,7 @@
     , "random"
     , "ansi"
     , "console"
+    , "stringutils"
     ]
 , packages =
     ./packages.dhall

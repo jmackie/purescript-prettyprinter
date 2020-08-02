@@ -1,4 +1,4 @@
-module Test.Code (test) where
+module Test.Code.FunctionSignature (test) where
 
 import Prelude
 import Data.Array as Array

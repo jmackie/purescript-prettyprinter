@@ -1,4 +1,4 @@
-module Text.Pretty.String where
+module Text.Pretty.Symbols.String where
 
 import Text.Pretty (Doc, enclose, text)
 

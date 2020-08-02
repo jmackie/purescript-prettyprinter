@@ -1,6 +1,6 @@
 -- | A collection of predefined Unicode values outside of ASCII range. For
 -- ASCII, see "Prettyprinter.Symbols.Ascii".
-module Text.Pretty.Unicode where
+module Text.Pretty.Symbols.Unicode where
 
 import Text.Pretty (Doc, enclose, text)
 

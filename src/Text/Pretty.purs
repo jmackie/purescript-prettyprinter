@@ -1,39 +1,81 @@
-module Text.Pretty
-    ( Doc
+module Text.Pretty (
+  -- | Functions from haskell library
 
-    -- Basic functionality
-    , text, nest, group, flatAlt, flatAltFn
-    , line, line', softline, softline', hardline
-    , space, emptyDoc
+  -- * Documents
+  Doc,
 
-    -- Alignment
-    , align, hang, indent
+  -- * Basic functionality
+  -- | Pretty(..),
+  -- | viaShow, unsafeViaShow, unsafeTextWithoutNewlines,
+  emptyDoc, nest, line, line', softline, softline', hardline,
 
-    -- Folds
-    , hsep, vsep, sep  -- replace newlines with spaces when grouped
-    , hcat, vcat, cat  -- remove newlines when grouped
+  -- ** Primitives for alternative layouts
+  group, flatAlt,
 
-    -- Reactive/conditional layouts
-    , column, nesting
+  -- * Alignment functions
+  align, hang, indent, encloseSep, list, tupled,
 
-    -- Operators
-    , appendWithSpace, (<+>)
+  -- * Binary functions
+  surroundWithSpace, (<+>),
 
-    -- General convenience
-    , enclose, punctuate, punctuate'
+  -- * List functions
+  concatWith,
 
-    -- Render
-    , render
-    )
-where
+  -- ** 'sep' family
+  hsep, vsep, fillSep, sep,
+  -- ** 'cat' family
+  hcat, vcat, fillCat, cat,
+  -- ** Others
+  punctuate,
+
+  -- * Reactive/conditional layouts
+  column, nesting, width, -- pageWidth,
+
+  -- * Filler functions
+  fill, fillBreak,
+
+  -- * General convenience
+  plural, enclose, surround,
+
+  -- ** Annotations
+  -- | annotate,
+  -- | unAnnotate,
+  -- | reAnnotate,
+  -- | alterAnnotations,
+  -- | unAnnotateS,
+  -- | reAnnotateS,
+  -- | alterAnnotationsS,
+
+  -- * Optimization
+  -- | fuse, FusionDepth(..), -- TODO
+
+  -- * Layout
+  SimpleDocStream(..),
+  -- | PageWidth(..), defaultPageWidth,
+  -- | LayoutOptions(..), defaultLayoutOptions,
+  -- | layoutPretty, layoutCompact, layoutSmart,
+  -- | removeTrailingWhitespace,
+
+  -- * Rendering
+  render,
+
+  -- * Internal helpers
+  spaces,
+
+  -- | Functions from purescript library
+  text, flatAltFn, space
+) where
 
 -- NOTE: Think of and build your layout in its narrowest form, then `group` the
 -- parts that _could_ be flattened if there's space available.
+
 import Prelude
+
 import Control.Alt ((<|>))
+import Data.Array as Array
 import Data.Container.Class (class Container)
 import Data.Container.Class as Container
-import Data.Foldable (class Foldable, fold, intercalate)
+import Data.Foldable (class Foldable, fold, foldl, intercalate)
 import Data.Lazy (Lazy)
 import Data.Lazy as Lazy
 import Data.List (List(..), (:))
@@ -95,7 +137,7 @@ emptyDoc = Empty
 -- |
 -- | The argument should not contain whitespace.
 text :: forall a. Renderable a => a -> Doc a
-text a = if l > 0 then Text l a else mempty
+text a = if l > 0 then Text l a else Empty
   where
   l = Renderable.width a
 
@@ -185,6 +227,78 @@ hang i x = align (nest i x)
 indent :: forall a. Renderable a => Int -> Doc a -> Doc a
 indent i x = hang i (text (spaces i) <> x)
 
+-- | @('encloseSep' l r sep xs)@ concatenates the documents @xs@ separated by
+-- @sep@, and encloses the resulting document by @l@ and @r@.
+--
+-- The documents are laid out horizontally if that fits the page,
+--
+-- >>> let doc = "list" <+> align (encloseSep lbracket rbracket comma (map pretty [1,20,300,4000]))
+-- >>> putDocW 80 doc
+-- list [1,20,300,4000]
+--
+-- If there is not enough space, then the input is split into lines entry-wise
+-- therwise they are laid out vertically, with separators put in the front:
+--
+-- >>> putDocW 10 doc
+-- list [1
+--      ,20
+--      ,300
+--      ,4000]
+--
+-- Note that @doc@ contains an explicit call to 'align' so that the list items
+-- are aligned vertically.
+--
+-- For putting separators at the end of entries instead, have a look at
+-- 'punctuate'.
+encloseSep
+    :: forall a
+     . Renderable a
+    => Doc a   -- ^ left delimiter
+    -> Doc a   -- ^ right delimiter
+    -> Doc a   -- ^ separator
+    -> Array (Doc a) -- ^ input documents
+    -> Doc a
+encloseSep l r s ds = case ds of
+    []  -> l <> r
+    [d] -> l <> d <> r
+    _   -> cat (Array.zipWith (<>) ([l] <> Array.replicate (Array.length ds - 1) s) ds) <> r
+
+-- | Haskell-inspired variant of 'encloseSep' with braces and comma as
+-- separator.
+--
+-- >>> let doc = list (map pretty [1,20,300,4000])
+--
+-- >>> putDocW 80 doc
+-- [1, 20, 300, 4000]
+--
+-- >>> putDocW 10 doc
+-- [ 1
+-- , 20
+-- , 300
+-- , 4000 ]
+list :: Array (Doc String) -> Doc String
+list = group <<< encloseSep (flatAlt (text "[ ") (text "["))
+                            (flatAlt (text " ]") (text "]"))
+                            (text ", ")
+
+-- | Haskell-inspired variant of 'encloseSep' with parentheses and comma as
+-- separator.
+--
+-- >>> let doc = tupled (map pretty [1,20,300,4000])
+--
+-- >>> putDocW 80 doc
+-- (1, 20, 300, 4000)
+--
+-- >>> putDocW 10 doc
+-- ( 1
+-- , 20
+-- , 300
+-- , 4000 )
+tupled :: Array (Doc String) -> Doc String
+tupled = group <<< encloseSep (flatAlt (text "( ") (text "("))
+                              (flatAlt (text " )") (text ")"))
+                              (text ", ")
+
 -- | Concatenate documents with a horizontal space between them.
 hsep :: forall f a. Foldable f => Renderable a => f (Doc a) -> Doc a
 hsep = intercalate space
@@ -194,6 +308,54 @@ hsep = intercalate space
 -- | separated with a space instead.
 vsep :: forall f a. Foldable f => Renderable a => f (Doc a) -> Doc a
 vsep = intercalate line
+
+-- | `'fillSep' xs` concatenates the documents `xs` horizontally with `'<+>'`
+-- as long as it fits the page, then inserts a `'line'` and continues doing that
+-- for all documents in `xs`. (`'line'` means that if 'group'ed, the documents
+-- are separated with a 'space' instead of newlines. Use 'fillCat' if you do not
+-- want a 'space'.)
+--
+-- Let's print some words to fill the line:
+--
+-- >>> let docs = take 20 (cycle ["lorem", "ipsum", "dolor", "sit", "amet"])
+-- >>> putDocW 80 ("Docs:" <+> fillSep docs)
+-- Docs: lorem ipsum dolor sit amet lorem ipsum dolor sit amet lorem ipsum dolor
+-- sit amet lorem ipsum dolor sit amet
+--
+-- The same document, printed at a width of only 40, yields
+--
+-- >>> putDocW 40 ("Docs:" <+> fillSep docs)
+-- Docs: lorem ipsum dolor sit amet lorem
+-- ipsum dolor sit amet lorem ipsum dolor
+-- sit amet lorem ipsum dolor sit amet
+fillSep :: forall a . Renderable a => Array (Doc a) -> Doc a
+fillSep = concatWith (\x y -> x <> softline <> y)
+
+-- | Concatenate all documents element-wise with a binary function.
+--
+-- @
+-- 'concatWith' _ [] = 'mempty'
+-- 'concatWith' (**) [x,y,z] = x ** y ** z
+-- @
+--
+-- Multiple convenience definitions based on 'concatWith' are alredy predefined,
+-- for example
+--
+-- @
+-- 'hsep'    = 'concatWith' ('<+>')
+-- 'fillSep' = 'concatWith' (\\x y -> x '<>' 'softline' '<>' y)
+-- @
+--
+-- This is also useful to define customized joiners,
+--
+-- >>> concatWith (surround dot) ["Prettyprinter", "Render", "Text"]
+-- Prettyprinter.Render.Text
+concatWith :: forall a . (Doc a -> Doc a -> Doc a) -> Array (Doc a) -> Doc a
+concatWith f =
+  Array.uncons
+    >>> case _ of
+        Nothing -> Empty
+        Just { head, tail } -> foldl f head tail
 
 -- | `sep xs` tries laying out the documents `xs` separated with spaces,
 -- | and if this does not fit the page, separates them with newlines. This is what
@@ -212,6 +374,35 @@ hcat = fold
 vcat :: forall f a. Foldable f => f (Doc a) -> Doc a
 vcat = intercalate line'
 
+-- | @('fillCat' xs)@ concatenates documents @xs@ horizontally with @'<>'@ as
+-- long as it fits the page, then inserts a @'line''@ and continues doing that
+-- for all documents in @xs@. This is similar to how an ordinary word processor
+-- lays out the text if you just keep typing after you hit the maximum line
+-- length.
+--
+-- (@'line''@ means that if 'group'ed, the documents are separated with nothing
+-- instead of newlines. See 'fillSep' if you want a 'space' instead.)
+--
+-- Observe the difference between 'fillSep' and 'fillCat'. 'fillSep'
+-- concatenates the entries 'space'd when 'group'ed,
+--
+-- >>> let docs = take 20 (cycle (["lorem", "ipsum", "dolor", "sit", "amet"]))
+-- >>> putDocW 40 ("Grouped:" <+> group (fillSep docs))
+-- Grouped: lorem ipsum dolor sit amet
+-- lorem ipsum dolor sit amet lorem ipsum
+-- dolor sit amet lorem ipsum dolor sit
+-- amet
+--
+-- On the other hand, 'fillCat' concatenates the entries directly when
+-- 'group'ed,
+--
+-- >>> putDocW 40 ("Grouped:" <+> group (fillCat docs))
+-- Grouped: loremipsumdolorsitametlorem
+-- ipsumdolorsitametloremipsumdolorsitamet
+-- loremipsumdolorsitamet
+fillCat :: forall a . Array (Doc a) -> Doc a
+fillCat = concatWith (\x y -> x <> softline' <> y)
+
 -- | `cat xs` tries laying out the documents `xs` separated with nothing,
 -- | and if this does not fit the page, separates them with newlines. This is what
 -- | differentiates it from `vcat`, which always lays out its contents beneath
@@ -229,20 +420,128 @@ column = Column
 nesting :: forall a. (Int -> Doc a) -> Doc a
 nesting = Nesting
 
+-- | @('width' doc f)@ lays out the document 'doc', and makes the column width
+-- of it available to a function.
+--
+-- >>> let annotate doc = width (brackets doc) (\w -> " <- width:" <+> pretty w)
+-- >>> align (vsep (map annotate ["---", "------", indent 3 "---", vsep ["---", indent 4 "---"]]))
+-- [---] <- width: 5
+-- [------] <- width: 8
+-- [   ---] <- width: 8
+-- [---
+--     ---] <- width: 8
+width :: forall a . Doc a -> (Int -> Doc a) -> Doc a
+width doc f
+  = column (\colStart ->
+        doc <> column (\colEnd ->
+            f (colEnd - colStart)))
+
+-- | @('fill' i x)@ lays out the document @x@. It then appends @space@s until
+-- the width is equal to @i@. If the width of @x@ is already larger, nothing is
+-- appended.
+--
+-- This function is quite useful in practice to output a list of bindings:
+--
+-- >>> let types = [("empty","Doc"), ("nest","Int -> Doc -> Doc"), ("fillSep","[Doc] -> Doc")]
+-- >>> let ptype (name, tp) = fill 5 (pretty name) <+> "::" <+> pretty tp
+-- >>> "let" <+> align (vcat (map ptype types))
+-- let empty :: Doc
+--     nest  :: Int -> Doc -> Doc
+--     fillSep :: [Doc] -> Doc
+fill
+    :: forall a
+     . Renderable a
+    => Int -- ^ Append spaces until the document is at least this wide
+    -> Doc a
+    -> Doc a
+fill n doc = width doc (\w -> text $ spaces (n - w))
+
+-- | @('fillBreak' i x)@ first lays out the document @x@. It then appends @space@s
+-- until the width is equal to @i@. If the width of @x@ is already larger than
+-- @i@, the nesting level is increased by @i@ and a @line@ is appended. When we
+-- redefine @ptype@ in the example given in 'fill' to use @'fillBreak'@, we get
+-- a useful variation of the output:
+--
+-- >>> let types = [("empty","Doc"), ("nest","Int -> Doc -> Doc"), ("fillSep","[Doc] -> Doc")]
+-- >>> let ptype (name, tp) = fillBreak 5 (pretty name) <+> "::" <+> pretty tp
+-- >>> "let" <+> align (vcat (map ptype types))
+-- let empty :: Doc
+--     nest  :: Int -> Doc -> Doc
+--     fillSep
+--           :: [Doc] -> Doc
+fillBreak
+    :: forall a
+     . Renderable a
+    => Int -- ^ Append spaces until the document is at least this wide
+    -> Doc a
+    -> Doc a
+fillBreak f x = width x (\w ->
+    if w > f
+        then nest f line'
+        else text $ spaces (f - w))
+
 -- OPERATORS
 
 -- | Append two documents with a space between them.
-appendWithSpace :: forall a. Renderable a => Doc a -> Doc a -> Doc a
-appendWithSpace = appendWith space
+surroundWithSpace :: forall a. Renderable a => Doc a -> Doc a -> Doc a
+surroundWithSpace = surround space
 
-infixr 5 appendWithSpace as <+>
+infixr 5 surroundWithSpace as <+>
 
 -- CONVENIENCE
+
+-- $
+-- prop> \(NonNegative n) -> length (show (spaces n)) == n
+--
+-- >>> case spaces 1 of Char ' ' -> True; _ -> False
+-- True
+--
+-- >>> case spaces 0 of Empty -> True; _ -> False
+-- True
+--
+-- prop> \(Positive n) -> case (spaces (-n)) of Empty -> True; _ -> False
+
+
+
+-- | @('plural' n one many)@ is @one@ if @n@ is @1@, and @many@ otherwise. A
+-- typical use case is  adding a plural "s".
+--
+-- >>> let things = [True]
+-- >>> let amount = length things
+-- >>> pretty things <+> "has" <+> pretty amount <+> plural "entry" "entries" amount
+-- [True] has 1 entry
+plural
+    :: forall doc
+     . doc -- ^ @1@ case
+    -> doc -- ^ other cases
+    -> Int
+    -> doc
+plural one multiple n
+    | n == 1    = one
+    | otherwise = multiple
 
 -- | `enclose' l r x` encloses document `x` between documents `l` and `r`
 -- using `append`.
 enclose :: forall a. Doc a -> Doc a -> Doc a -> Doc a
 enclose l r x = l <> x <> r
+
+-- | @('surround' x l r)@ surrounds document @x@ with @l@ and @r@.
+--
+-- >>> surround "·" "A" "Z"
+-- A·Z
+--
+-- This is merely an argument reordering of @'enclose'@, but allows for
+-- definitions like
+--
+-- >>> concatWith (surround dot) ["Prettyprinter", "Render", "Text"]
+-- Prettyprinter.Render.Text
+surround
+    :: forall a
+     . Doc a
+    -> Doc a
+    -> Doc a
+    -> Doc a
+surround x l r = l <> x <> r
 
 -- | `punctuate p xs` appends `p` to all but the last document in `xs`.
 punctuate ::
@@ -267,7 +566,7 @@ punctuate' p = Container.mapTail (p <> _)
 -- RENDERING
 -- | Render a document, trying not to exceed a maximum line width.
 render :: forall a. Renderable a => Int -> Doc a -> a
-render width doc = layout $ forceSimpleDocStream $ best width 0 $ (Tuple 0 doc) : Nil
+render w doc = layout $ forceSimpleDocStream $ best w 0 $ (Tuple 0 doc) : Nil
 
 -- INTERNALS
 flatten :: forall a. Doc a -> Doc a
@@ -372,10 +671,6 @@ fits _ LSFail = false -- NOTE: This is what Fail constructors are for!
 fits _ LSEmpty = true
 fits w (LSText l _ x) = fits (w - l) (Lazy.force x)
 fits _ (LSLine _ _) = true
-
--- | Append documents with some other document between them.
-appendWith :: forall a. Doc a -> Doc a -> Doc a -> Doc a
-appendWith s x y = x <> s <> y
 
 spaces :: forall a. Renderable a => Int -> a
 spaces n = if n > 0 then copy n Renderable.space else mempty

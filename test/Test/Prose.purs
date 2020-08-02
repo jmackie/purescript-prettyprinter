@@ -23,11 +23,7 @@ testSoftWrap :: Int -> Array String -> Effect Unit
 testSoftWrap width words = runTest width (softWrap words)
 
 softWrap :: Array String -> Pretty.Doc String
-softWrap =
-  Array.uncons
-    >>> case _ of
-        Nothing -> mempty
-        Just { head, tail } -> foldl (\accum s -> accum <> Pretty.softline <> Pretty.text s) (Pretty.text head) tail
+softWrap = Pretty.concatWith (Pretty.surround Pretty.softline) <<< map Pretty.text
 
 randomWords :: Int -> Effect (Array String)
 randomWords n = sequence (replicate n randomWord)

@@ -136,7 +136,7 @@ line = FlatAlt Line space
 -- | `line'` is like `line`, but behaves like `mempty` if the line break
 -- | is undone by `group` (instead of `space`).
 line' :: forall a. Doc a
-line' = FlatAlt Line mempty
+line' = FlatAlt Line Empty
 
 -- | `softline` behaves like `space` if the resulting output fits the page,
 -- otherwise like `line`.
@@ -145,8 +145,8 @@ softline = Union space Line
 
 -- | `softline'` is like `softline`, but behaves like `mempty` if the
 -- | resulting output does not fit on the page (instead of `space`).
-softline' :: forall a. Renderable a => Doc a
-softline' = Union mempty Line
+softline' :: forall a. Doc a
+softline' = Union Empty Line
 
 -- | A `hardline` is _always_ laid out as a line break, even when `group`ed or
 -- | when there is plenty of space.
@@ -246,7 +246,6 @@ punctuate ::
   forall f a.
   Container f =>
   Functor f =>
-  Renderable a =>
   Doc a ->
   f (Doc a) ->
   f (Doc a)
@@ -257,7 +256,6 @@ punctuate' ::
   forall f a.
   Container f =>
   Functor f =>
-  Renderable a =>
   Doc a ->
   f (Doc a) ->
   f (Doc a)
@@ -269,7 +267,7 @@ render :: forall a. Renderable a => Int -> Doc a -> a
 render width doc = layout $ forceSimpleDocStream $ best width 0 $ (Tuple 0 doc) : Nil
 
 -- INTERNALS
-flatten :: forall a. Renderable a => Doc a -> Doc a
+flatten :: forall a. Doc a -> Doc a
 flatten Empty = Empty
 flatten Fail = Fail
 flatten (Cat x y) = Cat (flatten x) (flatten y)
@@ -283,7 +281,7 @@ flatten (Union x _) = flatten x -- important
 
 -- | Returns `Nothing` if flattening has no effect. Useful as an optimization
 -- | in `group`.
-flattenMaybe :: forall a. Renderable a => Doc a -> Maybe (Doc a)
+flattenMaybe :: forall a. Doc a -> Maybe (Doc a)
 flattenMaybe Empty = Nothing
 flattenMaybe Fail = Nothing
 flattenMaybe (Nest i x) = Nest i <$> flattenMaybe x
@@ -334,7 +332,6 @@ layout (SLine i x) = Renderable.newline <> spaces i <> layout x
 -- | Select the "best" layout stream/path from a document tree.
 best ::
   forall a.
-  Renderable a =>
   Int -> -- available width
   Int -> -- column number (i.e. chars on this line, including indentation)
   Docs a ->

@@ -20,8 +20,8 @@ encloseSep leftDelimiter rightDelimiter separator = case _ of
       (cat $ Array.mapWithIndex
         (\i doc ->
           if i == 0
-            then leftDelimiter <> space <> doc
-            else separator <> doc
+            then leftDelimiter <> space <> align doc
+            else separator <> align doc
         )
         docs
         <>

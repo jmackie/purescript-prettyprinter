@@ -1,7 +1,7 @@
 module Text.Pretty.Code.Purescript where
 
-import Prelude
-import Text.Pretty
+import Prelude (($), (<<<), (<>), (==))
+import Text.Pretty (Doc, align, cat, flatAlt, group, hcat, punctuate, space, text)
 import Data.Renderable (class Renderable)
 import Data.Array as Array
 

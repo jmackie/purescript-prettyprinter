@@ -1,18 +1,10 @@
 module Test.Code.Purescript (test) where
 
 import Prelude
-import Data.Array as Array
-import Data.Array.NonEmpty (NonEmptyArray)
-import Data.Array.NonEmpty as NonEmptyArray
-import Data.Foldable (intercalate)
-import Data.NonEmpty ((:|))
-import Data.Renderable (class Renderable)
-import Data.String as String
 import Effect (Effect)
-import Test.Common (runTest, green)
-import Text.Pretty ((<+>))
-import Text.Pretty as Pretty
-import Text.Pretty.Code.Purescript as Pretty
+import Test.Common (runTest)
+import Text.Pretty (text) as Pretty
+import Text.Pretty.Code.Purescript (list) as Pretty
 
 test :: Effect Unit
 test = do

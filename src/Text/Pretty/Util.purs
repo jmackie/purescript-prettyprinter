@@ -2,7 +2,7 @@
 module Text.Pretty.Util where
 
 import Prelude
-import Text.Pretty (Doc, enclose, text, fillSep)
+import Text.Pretty (Doc, fillSep, text)
 import Data.String.Utils as String
 
 -- | Split an input into word-sized 'Doc's.

@@ -18,7 +18,7 @@ encloseSep leftDelimiter rightDelimiter separator = case _ of
     docs ->
       let
         leftDelimiter' = flatAlt (leftDelimiter <> space) leftDelimiter
-      in cat $ (Array.zipWith (<>) ([leftDelimiter'] <> Array.replicate (Array.length docs - 1) separator) (map align docs)) <> [rightDelimiter]
+      in vcat $ (Array.zipWith (<>) ([leftDelimiter'] <> Array.replicate (Array.length docs - 1) separator) (map align docs)) <> [rightDelimiter]
 
 -- | Purescript-inspired variant of 'encloseSep' with braces and comma as
 -- separator.

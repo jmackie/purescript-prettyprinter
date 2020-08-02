@@ -3,7 +3,7 @@ module Text.Pretty (
   -- | https://hackage.haskell.org/package/prettyprinter-1.7.0/docs/src/Prettyprinter.Internal.html
 
   -- * Documents
-  Doc,
+  Doc(..),
 
   -- * Basic functionality
   -- | Pretty(..),
@@ -64,7 +64,7 @@ module Text.Pretty (
   spaces,
 
   -- | Functions from this library, that are not present in haskell library
-  text, flatAltFn, space, concatWithNonEmpty
+  text, flatAltFn, space, concatWithNonEmpty, surroundOmittingEmpty
 ) where
 
 -- NOTE: Think of and build your layout in its narrowest form, then `group` the
@@ -106,12 +106,32 @@ data Doc a
 
     | Line
 
-    -- Lay out the first `Doc`, but when flattened fall back to the second.
+    -- Lay out the first `Doc`, but when flattened (using `group`) - fall back to the second.
     -- This is used for implementing "flattened alternatives" (hence the name).
-    -- e.g. `line` vs `line'`
+    --
+    -- e.g.
+    --
+    -- ```
+    -- line = FlatAlt Line space
+    --
+    -- group (FlatAlt _ y) = y
+    -- render (FlatAlt x _) = x
+    -- ```
     | FlatAlt (Doc a) (Doc a)
 
     -- Branching of possible layouts happens here!
+    -- `Union` makes render 1st doc IIF there are enough width ELSE 2d doc
+    --
+    -- e.g.
+    --
+    -- ```
+    -- softline = Union space Line
+    -- softline = group line
+    --
+    -- group (Union x _) = x
+    -- render (Union x y) = if enough_space then x else y
+    -- ```
+    --
     -- invariant: both documents should flatten to the same layout
     -- invariant: no first line in x is shorter than any first line in y
     | Union (Doc a) (Doc a)
@@ -349,7 +369,7 @@ cat = vcat >>> group
 column :: forall a. (Int -> Doc a) -> Doc a
 column = Column
 
--- | Layout a documnet depending on the current nesting level.
+-- | Layout a document depending on the current nesting level.
 nesting :: forall a. (Int -> Doc a) -> Doc a
 nesting = Nesting
 
@@ -582,7 +602,7 @@ best w k = case _ of
     Nest j x -> best w k (Tuple (identation + j) x : rest)
     Column f -> best w k (Tuple identation (f k) : rest)
     Nesting f -> best w k (Tuple identation (f identation) : rest)
-    FlatAlt x y -> best w k (Tuple identation x : rest)
+    FlatAlt x _ -> best w k (Tuple identation x : rest)
     Union x y ->
       better w k
         (best w k (Tuple identation x : rest))
@@ -615,3 +635,27 @@ copy n a = fold (replicate n a :: Array a)
 -- | Everyone's fav Haskell function.
 error :: forall a. String -> a
 error msg = unsafePartial (crashWith msg)
+
+-- | ```purs
+-- | -- having
+-- | line' = FlatAlt Line Empty
+
+-- | -- `Doc a` is not a monoid in respect to FlatAlt, it is a monoid for Empty only
+-- | -- that's why we need to jump extra hoops
+
+-- | -- For example:
+
+-- | -- is using monoid inside
+-- | intercalate line' [Empty, Empty, Empty] => "\n\n"
+
+-- | -- is using monoid inside too
+-- | concatWith (surround line') [Empty, Empty, Empty] => "\n\n"
+
+-- | -- but this works!
+-- | concatWith (surroundOmittingEmpty line') [Empty, Empty, Empty] => ""
+-- | ```
+
+surroundOmittingEmpty :: forall a . Doc a -> Doc a -> Doc a -> Doc a
+surroundOmittingEmpty _ Empty y        = y
+surroundOmittingEmpty _ x Empty        = x
+surroundOmittingEmpty textInMiddle x y = x <> textInMiddle <> y

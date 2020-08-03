@@ -598,9 +598,6 @@ punctuate' ::
 punctuate' p = Container.mapTail (p <> _)
 
 -- RENDERING
--- | Render a document, trying not to exceed a maximum line width.
-render :: forall a. Renderable a => Int -> Doc a -> a
-render w doc = layout $ forceSimpleDocStream $ best w 0 $ (Tuple 0 doc) : Nil
 
 -- | List of indentation/document pairs.
 type Docs a
@@ -627,9 +624,13 @@ forceSimpleDocStream = case _ of
   LSText i s x -> SText i s (forceSimpleDocStream $ Lazy.force x)
   LSLine i x -> SLine i (forceSimpleDocStream $ Lazy.force x)
 
+-- | Render a document, trying not to exceed a maximum line width.
+render :: forall a. Renderable a => Int -> Doc a -> a
+render w doc = layout $ forceSimpleDocStream $ best w 0 $ (Tuple 0 doc) : Nil
+
 -- | Actual render a chosen document stream.
 layout :: forall a. Renderable a => SimpleDocStream a -> a
-layout SFail = unsafeCrashWith "attempt to layout SFail" -- shouldn't happen!
+layout SFail = unsafePartial (crashWith "attempt to layout SFail") -- shouldn't happen!
 layout SEmpty = mempty
 layout (SText _ a x) = a <> layout x
 layout (SLine i x) = Renderable.newline <> spaces i <> layout x
@@ -675,16 +676,14 @@ fits _ LSEmpty = true
 fits w (LSText l _ x) = fits (w - l) (Lazy.force x)
 fits _ (LSLine _ _) = true
 
+-- | FUNCTIONS, NOT AVAILABLE IN HASKELL VERSION
+
 spaces :: forall a. Renderable a => Int -> a
 spaces n = if n > 0 then copy n Renderable.space else mempty
 
 -- | Used for indentation
 copy :: forall a. Monoid a => Int -> a -> a
 copy n a = fold (replicate n a :: Array a)
-
--- | Everyone's fav Haskell function.
-unsafeCrashWith :: forall a. String -> a
-unsafeCrashWith msg = unsafePartial (crashWith msg)
 
 -- | The variant of `surround` that will not even try to use `middleSeparator` if any of inputs are `Empty`
 -- | It will just return the other input
@@ -706,7 +705,6 @@ unsafeCrashWith msg = unsafePartial (crashWith msg)
 -- | -- but this works!
 -- | concatWith (surroundOmittingEmpty line') [Empty, Empty, Empty] => ""
 -- | ```
-
 surroundOmittingEmpty :: forall a . Doc a -> Doc a -> Doc a -> Doc a
 surroundOmittingEmpty _ Empty y        = y
 surroundOmittingEmpty _ x Empty        = x

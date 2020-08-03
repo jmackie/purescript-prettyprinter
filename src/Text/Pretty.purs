@@ -579,7 +579,7 @@ forceSimpleDocStream = case _ of
 
 -- | Actual render a chosen document stream.
 layout :: forall a. Renderable a => SimpleDocStream a -> a
-layout SFail = error "attempt to layout SFail" -- shouldn't happen!
+layout SFail = unsafeCrashWith "attempt to layout SFail" -- shouldn't happen!
 layout SEmpty = mempty
 layout (SText _ a x) = a <> layout x
 layout (SLine i x) = Renderable.newline <> spaces i <> layout x
@@ -633,8 +633,8 @@ copy :: forall a. Monoid a => Int -> a -> a
 copy n a = fold (replicate n a :: Array a)
 
 -- | Everyone's fav Haskell function.
-error :: forall a. String -> a
-error msg = unsafePartial (crashWith msg)
+unsafeCrashWith :: forall a. String -> a
+unsafeCrashWith msg = unsafePartial (crashWith msg)
 
 -- | ```purs
 -- | -- having

@@ -64,7 +64,7 @@ module Text.Pretty (
   spaces,
 
   -- | Functions from this library, that are not present in haskell library
-  text, flatAltFn, space, concatWithNonEmpty, surroundOmittingEmpty
+  text, flatAltFn, space, concatWithNonEmpty, surroundOmittingEmpty, vcatOmittingEmpty, vcatOmittingEmptyNonEmpty
 ) where
 
 -- NOTE: Think of and build your layout in its narrowest form, then `group` the
@@ -73,8 +73,8 @@ module Text.Pretty (
 import Prelude
 
 import Control.Alt ((<|>))
-import Data.Array.NonEmpty as NonEmptyArray
 import Data.Array.NonEmpty (NonEmptyArray)
+import Data.Array.NonEmpty as NonEmptyArray
 import Data.Container.Class (class Container)
 import Data.Container.Class as Container
 import Data.Foldable (class Foldable, fold, foldl, intercalate)
@@ -636,21 +636,20 @@ copy n a = fold (replicate n a :: Array a)
 unsafeCrashWith :: forall a. String -> a
 unsafeCrashWith msg = unsafePartial (crashWith msg)
 
+-- | `Doc a` is not a monoid in respect to FlatAlt, it is a monoid for Empty only
+-- | that's why we need to jump extra hoops if we want to omit Empty
+-- |
+-- | It's preffereably to use `concatWith (surroundOmittingEmpty line')` instead of vcat
+-- |
 -- | ```purs
 -- | -- having
 -- | line' = FlatAlt Line Empty
-
--- | -- `Doc a` is not a monoid in respect to FlatAlt, it is a monoid for Empty only
--- | -- that's why we need to jump extra hoops
-
+-- |
 -- | -- For example:
-
+-- |
 -- | -- is using monoid inside
--- | intercalate line' [Empty, Empty, Empty] => "\n\n"
-
--- | -- is using monoid inside too
--- | concatWith (surround line') [Empty, Empty, Empty] => "\n\n"
-
+-- | vcat [Empty, Empty, Empty] == intercalate line' [Empty, Empty, Empty] == concatWith (surround line') [Empty, Empty, Empty] "\n\n"
+-- |
 -- | -- but this works!
 -- | concatWith (surroundOmittingEmpty line') [Empty, Empty, Empty] => ""
 -- | ```
@@ -659,3 +658,9 @@ surroundOmittingEmpty :: forall a . Doc a -> Doc a -> Doc a -> Doc a
 surroundOmittingEmpty _ Empty y        = y
 surroundOmittingEmpty _ x Empty        = x
 surroundOmittingEmpty textInMiddle x y = x <> textInMiddle <> y
+
+vcatOmittingEmpty :: forall f a. Container f => Foldable f => Renderable a => f (Doc a) -> Doc a
+vcatOmittingEmpty = concatWith (surroundOmittingEmpty line')
+
+vcatOmittingEmptyNonEmpty :: forall a . Renderable a => NonEmptyArray (Doc a) -> Doc a
+vcatOmittingEmptyNonEmpty = concatWithNonEmpty (surroundOmittingEmpty line')

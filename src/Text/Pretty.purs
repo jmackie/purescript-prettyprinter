@@ -71,8 +71,6 @@ module Text.Pretty (
 -- parts that _could_ be flattened if there's space available.
 
 import Prelude
-
-import Control.Alt ((<|>))
 import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Array.NonEmpty as NonEmptyArray
 import Data.Container.Class (class Container)
@@ -170,12 +168,95 @@ nest :: forall a. Int -> Doc a -> Doc a
 nest 0 x = x -- Optimization
 nest i x = Nest i x
 
--- | Lay the document out on a single line if it fits the available width.
-group :: forall a. Renderable a => Doc a -> Doc a
-group x = -- Union (flatten x) x
-  case flattenMaybe x of
-       Nothing -> x
-       Just flattened -> Union flattened x
+-- | @('group' x)@ tries laying out @x@ into a single line by removing the
+-- contained line breaks; if this does not fit the page, or when a 'hardline'
+-- within @x@ prevents it from being flattened, @x@ is laid out without any
+-- changes.
+--
+-- The 'group' function is key to layouts that adapt to available space nicely.
+--
+-- See 'vcat', 'line', or 'flatAlt' for examples that are related, or make good
+-- use of it.
+-- See note [Group: special flattening]
+group :: forall a . Doc a -> Doc a
+group x = case x of
+  Union _ _ -> x
+  FlatAlt a b -> case changesUponFlattening b of
+    Flattened b' -> Union b' a
+    AlreadyFlat  -> Union b a
+    NeverFlat    -> a
+  _ -> case changesUponFlattening x of
+    Flattened x' -> Union x' x
+    AlreadyFlat  -> x
+    NeverFlat    -> x
+
+-- Note [Group: special flattening]
+--
+-- Since certain documents do not change under removal of newlines etc, there is
+-- no point in creating a 'Union' of the flattened and unflattened version – all
+-- this does is introducing two branches for the layout algorithm to take,
+-- resulting in potentially exponential behavior on deeply nested examples, such
+-- as
+--
+--     pathological n = iterate (\x ->  hsep [x, sep []] ) "foobar" !! n
+--
+-- See https://github.com/quchen/prettyprinter/issues/22 for the  corresponding
+-- ticket.
+
+data FlattenResult a
+  = Flattened a
+  -- ^ @a@ is likely flatter than the input.
+  | AlreadyFlat
+  -- ^ The input was already flat, e.g. a 'Text'.
+  | NeverFlat
+  -- ^ The input couldn't be flattened: It contained a 'Line' or 'Fail'.
+
+derive instance functorFlattenResult :: Functor FlattenResult
+
+-- | Choose the first element of each @Union@, and discard the first field of
+-- all @FlatAlt@s.
+--
+-- The result is 'Flattened' if the element might change depending on the layout
+-- algorithm (i.e. contains differently renderable sub-documents), and 'AlreadyFlat'
+-- if the document is static (e.g. contains only a plain 'Empty' node).
+-- 'NeverFlat' is returned when the document cannot be flattened because it
+-- contains a hard 'Line' or 'Fail'.
+-- See [Group: special flattening] for further explanations.
+changesUponFlattening :: forall a . Doc a -> FlattenResult (Doc a)
+changesUponFlattening = \doc -> case doc of
+    FlatAlt _ y     -> Flattened (flatten y)
+    Line            -> NeverFlat
+    Union x _       -> Flattened x
+    Nest i x        -> map (Nest i) (changesUponFlattening x)
+
+    Column f        -> Flattened (Column (flatten <<< f))
+    Nesting f       -> Flattened (Nesting (flatten <<< f))
+
+    Cat x y -> case changesUponFlattening x, changesUponFlattening y of
+      NeverFlat    ,  _           -> NeverFlat
+      _            , NeverFlat    -> NeverFlat
+      Flattened x' , Flattened y' -> Flattened (Cat x' y')
+      Flattened x' , AlreadyFlat  -> Flattened (Cat x' y)
+      AlreadyFlat  , Flattened y' -> Flattened (Cat x y')
+      AlreadyFlat  , AlreadyFlat  -> AlreadyFlat
+
+    Empty    -> AlreadyFlat
+    Text _ _ -> AlreadyFlat
+    Fail     -> NeverFlat
+  where
+    -- Flatten, but don’t report whether anything changes.
+    flatten :: Doc a -> Doc a
+    flatten = \doc -> case doc of
+        FlatAlt _ y     -> flatten y
+        Cat x y         -> Cat (flatten x) (flatten y)
+        Nest i x        -> Nest i (flatten x)
+        Line            -> Fail
+        Union x _       -> flatten x
+        Column f        -> Column (flatten <<< f)
+        Nesting f       -> Nesting (flatten <<< f)
+        Fail            -> Fail
+        Empty           -> Empty
+        Text l a        -> Text l a
 
 -- | `flatAlt x y` renders `x` by default, but falls back to `y` when grouped.
 flatAlt ::
@@ -521,37 +602,6 @@ punctuate' p = Container.mapTail (p <> _)
 render :: forall a. Renderable a => Int -> Doc a -> a
 render w doc = layout $ forceSimpleDocStream $ best w 0 $ (Tuple 0 doc) : Nil
 
--- INTERNALS
-flatten :: forall a. Doc a -> Doc a
-flatten Empty = Empty
-flatten Fail = Fail
-flatten (Cat x y) = Cat (flatten x) (flatten y)
-flatten (Nest i x) = flatten x
-flatten (Column f) = Column (f >>> flatten)
-flatten (Nesting f) = Nesting (f >>> flatten)
-flatten (Text l a) = Text l a
-flatten Line = Fail
-flatten (FlatAlt _ y) = flatten y
-flatten (Union x _) = flatten x -- important
-
--- | Returns `Nothing` if flattening has no effect. Useful as an optimization
--- | in `group`.
-flattenMaybe :: forall a. Doc a -> Maybe (Doc a)
-flattenMaybe Empty = Nothing
-flattenMaybe Fail = Nothing
-flattenMaybe (Nest i x) = Nest i <$> flattenMaybe x
-flattenMaybe (Column f) = Just (Column (f >>> flatten))
-flattenMaybe (Nesting f) = Just (Nesting (f >>> flatten))
-flattenMaybe (Text _ _) = Nothing
-flattenMaybe Line = Just Fail
-flattenMaybe (FlatAlt _ y) = Just (flatten y)
-flattenMaybe (Union x _) = flattenMaybe x <|> Just x
-flattenMaybe (Cat x y) = case flattenMaybe x, flattenMaybe y of
-  Nothing, Nothing -> Nothing
-  Just x', Nothing -> Just (Cat x' y)
-  Nothing, Just y' -> Just (Cat x y')
-  Just x', Just y' -> Just (Cat x' y')
-
 -- | List of indentation/document pairs.
 type Docs a
   = List (Tuple Int (Doc a))
@@ -636,6 +686,9 @@ copy n a = fold (replicate n a :: Array a)
 unsafeCrashWith :: forall a. String -> a
 unsafeCrashWith msg = unsafePartial (crashWith msg)
 
+-- | The variant of `surround` that will not even try to use `middleSeparator` if any of inputs are `Empty`
+-- | It will just return the other input
+-- |
 -- | `Doc a` is not a monoid in respect to FlatAlt, it is a monoid for Empty only
 -- | that's why we need to jump extra hoops if we want to omit Empty
 -- |

@@ -1,8 +1,8 @@
-module Text.Pretty.Code.Purescript where
+module PrettyprinterRenderable.Code.Purescript where
 
 import Prelude
-import Text.Pretty
-import Data.Renderable (class Renderable)
+import PrettyprinterRenderable (Doc, align, flatAlt, group, space, text, vcat)
+import PrettyprinterRenderable.Renderable (class Renderable)
 import Data.Array as Array
 
 encloseSep

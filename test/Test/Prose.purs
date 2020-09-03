@@ -3,7 +3,7 @@ module Test.Prose (test) where
 
 import Prelude
 import Data.Array as Array
-import Data.Foldable (foldl, length)
+import Data.Foldable (length)
 import Data.Maybe (Maybe(Just, Nothing))
 import Data.Traversable (sequence)
 import Data.Unfoldable (replicate)
@@ -11,7 +11,7 @@ import Effect (Effect)
 import Effect.Random as Random
 import Test.Common (runTest)
 import Text.Lorem.Words as Lorem
-import Text.Pretty as Pretty
+import PrettyprinterRenderable as Pretty
 
 test :: Effect Unit
 test = do

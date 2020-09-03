@@ -1,4 +1,4 @@
-module Data.Renderable
+module PrettyprinterRenderable.Renderable
   ( class Renderable
   , space
   , newline

@@ -1,8 +1,8 @@
 -- | Frequently useful definitions for working with general prettyprinters.
-module Text.Pretty.Util where
+module PrettyprinterRenderable.Util where
 
 import Prelude
-import Text.Pretty (Doc, fillSep, text)
+import PrettyprinterRenderable (Doc, fillSep, text)
 import Data.String.Utils as String
 
 -- | Split an input into word-sized 'Doc's.

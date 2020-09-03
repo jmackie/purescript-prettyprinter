@@ -1,6 +1,6 @@
-module Text.Pretty.Symbols.String where
+module PrettyprinterRenderable.Symbols.String where
 
-import Text.Pretty (Doc, enclose, text)
+import PrettyprinterRenderable (Doc, enclose, text)
 
 -- | >>> squotes "·"
 -- '·'

@@ -1,4 +1,4 @@
-module Text.Pretty (
+module PrettyprinterRenderable (
   -- | Functions from original haskell library
   -- | https://hackage.haskell.org/package/prettyprinter-1.7.0/docs/src/Prettyprinter.Internal.html
 
@@ -64,7 +64,9 @@ module Text.Pretty (
   spaces,
 
   -- | Functions from this library, that are not present in haskell library
-  text, flatAltFn, space, concatWithNonEmpty, surroundOmittingEmpty, vcatOmittingEmpty, vcatOmittingEmptyNonEmpty
+  text, flatAltFn, space, concatWithNonEmpty, surroundOmittingEmpty, vcatOmittingEmpty, vcatOmittingEmptyNonEmpty,
+
+  module Export
 ) where
 
 -- NOTE: Think of and build your layout in its narrowest form, then `group` the
@@ -73,15 +75,17 @@ module Text.Pretty (
 import Prelude
 import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Array.NonEmpty as NonEmptyArray
-import Data.Container.Class (class Container)
-import Data.Container.Class as Container
+import PrettyprinterRenderable.Container (class Container)
+import PrettyprinterRenderable.Container (class Container) as Export
+import PrettyprinterRenderable.Container as Container
 import Data.Foldable (class Foldable, fold, foldl, intercalate)
 import Data.Lazy (Lazy)
 import Data.Lazy as Lazy
 import Data.List (List(..), (:))
 import Data.Maybe (Maybe(Just, Nothing))
-import Data.Renderable (class Renderable)
-import Data.Renderable as Renderable
+import PrettyprinterRenderable.Renderable (class Renderable)
+import PrettyprinterRenderable.Renderable as Renderable
+import PrettyprinterRenderable.Renderable (class Renderable) as Export
 import Data.Tuple (Tuple(Tuple))
 import Data.Unfoldable (replicate)
 import Partial (crashWith)

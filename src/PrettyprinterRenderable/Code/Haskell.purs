@@ -1,8 +1,8 @@
-module Text.Pretty.Code.Haskell where
+module PrettyprinterRenderable.Code.Haskell where
 
 import Prelude
-import Text.Pretty
-import Data.Renderable (class Renderable)
+import PrettyprinterRenderable (Doc, align, cat, flatAlt, group, text)
+import PrettyprinterRenderable.Renderable (class Renderable)
 import Data.Array as Array
 
 -- | @('encloseSep' l r sep xs)@ concatenates the documents @xs@ separated by

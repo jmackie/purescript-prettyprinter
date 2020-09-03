@@ -4,8 +4,8 @@ import Prelude
 import Data.Tuple (Tuple(Tuple))
 import Effect (Effect)
 import Test.Common (runTest)
-import Text.Pretty (Doc, enclose, flatAltFn, group, indent, line, punctuate, sep, text, (<+>))
-import Text.Pretty.Symbols.String (comma, lbracket, rbracket, lbrace, rbrace, dquotes)
+import PrettyprinterRenderable (Doc, enclose, flatAltFn, group, indent, line, punctuate, sep, text, (<+>))
+import PrettyprinterRenderable.Symbols.String (comma, lbracket, rbracket, lbrace, rbrace, dquotes)
 
 test :: Effect Unit
 test = do

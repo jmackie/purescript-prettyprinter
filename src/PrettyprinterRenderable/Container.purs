@@ -1,4 +1,4 @@
-module Data.Container.Class
+module PrettyprinterRenderable.Container
   ( class Container
   , cons
   , uncons

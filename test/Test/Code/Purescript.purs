@@ -3,8 +3,8 @@ module Test.Code.Purescript (test) where
 import Prelude
 import Effect (Effect)
 import Test.Common (runTest)
-import Text.Pretty (text) as Pretty
-import Text.Pretty.Code.Purescript (list) as Pretty
+import PrettyprinterRenderable (text) as Pretty
+import PrettyprinterRenderable.Code.Purescript (list) as Pretty
 
 test :: Effect Unit
 test = do

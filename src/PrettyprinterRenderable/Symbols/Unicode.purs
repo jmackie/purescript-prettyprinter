@@ -1,8 +1,8 @@
 -- | A collection of predefined Unicode values outside of ASCII range. For
 -- ASCII, see "Prettyprinter.Symbols.Ascii".
-module Text.Pretty.Symbols.Unicode where
+module PrettyprinterRenderable.Symbols.Unicode where
 
-import Text.Pretty (Doc, enclose, text)
+import PrettyprinterRenderable (Doc, enclose, text)
 
 -- | Double „99-66“ quotes, as used in German typography.
 --

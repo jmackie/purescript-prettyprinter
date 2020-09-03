@@ -3,8 +3,8 @@ module Test.Code.Haskell (test) where
 import Prelude
 import Effect (Effect)
 import Test.Common (runTest)
-import Text.Pretty (text) as Pretty
-import Text.Pretty.Code.Haskell (list) as Pretty
+import PrettyprinterRenderable (text) as Pretty
+import PrettyprinterRenderable.Code.Haskell (list) as Pretty
 
 test :: Effect Unit
 test = do

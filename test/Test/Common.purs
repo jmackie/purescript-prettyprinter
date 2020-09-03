@@ -14,7 +14,7 @@ import Data.Foldable (fold)
 import Data.Unfoldable (replicate)
 import Effect (Effect)
 import Effect.Console as Console
-import Text.Pretty as Pretty
+import PrettyprinterRenderable as Pretty
 
 runTest :: Int -> Pretty.Doc String -> Effect Unit
 runTest width doc = do

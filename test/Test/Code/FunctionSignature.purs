@@ -6,12 +6,12 @@ import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Array.NonEmpty as NonEmptyArray
 import Data.Foldable (intercalate)
 import Data.NonEmpty ((:|))
-import Data.Renderable (class Renderable)
+import PrettyprinterRenderable.Renderable (class Renderable)
 import Data.String as String
 import Effect (Effect)
 import Test.Common (runTest, green)
-import Text.Pretty ((<+>))
-import Text.Pretty as Pretty
+import PrettyprinterRenderable ((<+>))
+import PrettyprinterRenderable as Pretty
 
 test :: Effect Unit
 test = do

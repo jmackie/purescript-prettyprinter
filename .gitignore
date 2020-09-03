@@ -6,3 +6,4 @@ node_modules
 output
 tags*
 .psc-ide-port
+/.spago
